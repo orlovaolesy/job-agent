@@ -12,7 +12,7 @@ import yagmail
 # =========================
 # CONFIG
 # =========================
-KEYWORDS = ["data analyst", "data entry"]
+KEYWORDS = ["data analyst", "data entry", "Python", "Excel", "Power BI", "SQL", "junior data analyst", "junior data science", "data science trainee"]
 LOCATIONS = ["London", "Remote"]  # Hint for labeling
 LOOKBACK_HOURS = 72
 
@@ -83,73 +83,160 @@ def fmt_job(j):
 
 def scrape_weworkremotely():
     """
-    WeWorkRemotely RSS: clean timestamps; Remote roles.
+    WeWorkRemotely:
+    - Use RSS for Data category (reliable timestamps)
+    - Plus HTML keyword search to broaden results
+    - Match keywords in title OR description/snippet
     """
-    url = "https://weworkremotely.com/categories/remote-data-jobs.rss"
-    r = safe_get(url)
     jobs = []
-    soup = BeautifulSoup(r.text, "xml")
-    for item in soup.find_all("item"):
-        title = norm_space(item.title.text if item.title else "")
-        link = norm_space(item.link.text if item.link else "")
-        desc = html.unescape(item.description.text if item.description else "")
-        company = ""
-        m = re.split(r"\s+–\s+|\s+-\s+", title)
-        if len(m) >= 2:
-            company, title = m[0], " - ".join(m[1:])
-        pub = item.pubDate.text if item.pubDate else ""
-        try:
-            dt = dateparser.parse(pub)
-        except Exception:
-            dt = NOW_UTC - timedelta(days=999)
-        if contains_keyword(title) or contains_keyword(desc):
-            if within_last_24h(dt):
-                jobs.append({
-                    "title": title,
-                    "company": company or "N/A",
-                    "location": "Remote",
-                    "link": link,
-                    "posted_at_iso": dt.isoformat(),
-                    "source": "WeWorkRemotely"
-                })
+
+    # ---------- 1) RSS: Remote Data category ----------
+    try:
+        url = "https://weworkremotely.com/categories/remote-data-jobs.rss"
+        r = safe_get(url)
+        soup = BeautifulSoup(r.text, "xml")
+        for item in soup.find_all("item"):
+            title = norm_space(item.title.text if item.title else "")
+            link = norm_space(item.link.text if item.link else "")
+            desc = html.unescape(item.description.text if item.description else "")
+            company = ""
+            m = re.split(r"\s+–\s+|\s+-\s+", title)
+            if len(m) >= 2:
+                company, title = m[0], " - ".join(m[1:])
+            pub = item.pubDate.text if item.pubDate else ""
+            try:
+                dt = dateparser.parse(pub)
+            except Exception:
+                dt = NOW_UTC - timedelta(days=999)
+
+            if contains_keyword(title) or contains_keyword(desc):
+                if within_last_24h(dt):
+                    jobs.append({
+                        "title": title,
+                        "company": company or "N/A",
+                        "location": "Remote",
+                        "link": link,
+                        "posted_at_iso": dt.isoformat(),
+                        "source": "WeWorkRemotely"
+                    })
+    except Exception as e:
+        print(f"[WARN] WWR RSS failed: {e}")
+
+    # ---------- 2) HTML search: broaden coverage ----------
+    # Search terms from your KEYWORDS list; adjust pages if you want more depth.
+    for term in KEYWORDS:
+        for page in range(1, 3):  # first 2 pages
+            search_url = (
+                "https://weworkremotely.com/remote-jobs/search"
+                f"?term={requests.utils.quote(term)}&page={page}"
+            )
+            try:
+                r = safe_get(search_url)
+            except Exception as e:
+                print(f"[WARN] WWR search failed for term '{term}' page {page}: {e}")
+                continue
+
+            soup = BeautifulSoup(r.text, "html.parser")
+            # Typical listing links look like: /remote-jobs/<slug>
+            for a in soup.select("section.jobs li a[href*='/remote-jobs/']"):
+                link = "https://weworkremotely.com" + (a.get("href") or "")
+                title_el = a.select_one("span.title")
+                company_el = a.select_one("span.company")
+                # WWR search pages don't expose timestamps; we'll treat as "now"
+                dt = NOW_UTC
+
+                title = norm_space(title_el.get_text() if title_el else "")
+                company = norm_space(company_el.get_text() if company_el else "N/A")
+
+                # We don't have a full description here, but title match is often enough.
+                # (Optional: follow each link and scrape the job detail page for a real description.)
+                if contains_keyword(title):
+                    if within_last_24h(dt):
+                        jobs.append({
+                            "title": title,
+                            "company": company,
+                            "location": "Remote",
+                            "link": link,
+                            "posted_at_iso": dt.isoformat(),
+                            "source": "WeWorkRemotely"
+                        })
+
     return jobs
 
 def scrape_reed():
     """
-    Reed UK: query London 'Data Analyst' and 'Data Entry'; sort newest first.
+    Reed UK:
+    - Locations: London, UK-wide, Remote (work from home)
+    - Sort: newest first (DisplayDate)
+    - Match keywords in title OR description/snippet
+    - Final time filter enforced by within_last_24h(dt)
     """
     base = "https://www.reed.co.uk/jobs"
     queries = [
         ("data-analyst-jobs-in-london", "London"),
         ("data-entry-jobs-in-london", "London"),
+        ("data-analyst-jobs", "UK"),
+        ("data-entry-jobs", "UK"),
+        ("data-analyst-jobs?fromHome=True", "Remote (UK)"),
+        ("data-entry-jobs?fromHome=True", "Remote (UK)"),
     ]
+
+    def extract_text(el):
+        return norm_space(el.get_text(" ", strip=True)) if el else ""
+
     jobs = []
     for path, loc in queries:
-        for page in range(1, 3):  # first 2 pages
-            url = f"{base}/{path}?pageno={page}&sortby=DisplayDate"
-            r = safe_get(url)
+        for page in range(1, 6):  # first 5 pages
+            # Build URL (handle existing query string)
+            url = (
+                f"{base}/{path}&pageno={page}&sortby=DisplayDate"
+                if "?" in path
+                else f"{base}/{path}?pageno={page}&sortby=DisplayDate"
+            )
+
+            try:
+                r = safe_get(url)
+            except Exception as e:
+                print(f"[WARN] Reed fetch failed for {url}: {e}")
+                continue
+
             soup = BeautifulSoup(r.text, "html.parser")
             cards = soup.select("article.job-result-card") or soup.select("article.job-result")
+
             for c in cards:
                 title_el = c.select_one("h2.title a")
-                comp_el = c.select_one(".gtmJobListingPostedBy a, .job-result-heading__posted-by")
-                date_el = c.select_one("div.metadata div.posted-by, .job-metadata__item--time")
+                comp_el  = c.select_one(".gtmJobListingPostedBy a, .job-result-heading__posted-by")
+                date_el  = c.select_one("div.metadata div.posted-by, .job-metadata__item--time")
+
+                # Try several possible description/snippet containers Reed uses
+                desc_el = (
+                    c.select_one(".job-description")
+                    or c.select_one(".description")
+                    or c.select_one(".job-result-description")
+                    or c.select_one(".job-card_job-description")
+                )
+
                 link = title_el["href"] if title_el and title_el.has_attr("href") else None
                 if link and not link.startswith("http"):
                     link = "https://www.reed.co.uk" + link
-                title = norm_space(title_el.get_text() if title_el else "")
-                company = norm_space(comp_el.get_text() if comp_el else "")
-                date_txt = norm_space(date_el.get_text() if date_el else "")
 
+                title   = extract_text(title_el)
+                company = extract_text(comp_el)
+                date_tx = extract_text(date_el)
+                desc    = extract_text(desc_el)
+
+                # Rough posted time parsing (final 72h filter applied below)
                 dt = NOW_UTC - timedelta(days=999)
-                if "today" in date_txt.lower() or "hour" in date_txt.lower():
+                low = date_tx.lower()
+                if "today" in low or "hour" in low:
                     dt = NOW_UTC
                 else:
-                    m = re.search(r"(\d+)\s+day", date_txt.lower())
+                    m = re.search(r"(\d+)\s+day", low)
                     if m:
                         dt = NOW_UTC - timedelta(days=int(m.group(1)))
 
-                if title and contains_keyword(title):
+                # <<< Match keywords in title OR description/snippet >>>
+                if (title and contains_keyword(title)) or contains_keyword(desc):
                     if within_last_24h(dt):
                         jobs.append({
                             "title": title,
@@ -159,21 +246,22 @@ def scrape_reed():
                             "posted_at_iso": dt.isoformat(),
                             "source": "Reed"
                         })
-    return jobs
 
+    return jobs
+    
 def scrape_indeed_uk():
     """
     Indeed UK: use 'fromage=3' (last 72h) + sort=date; London + Remote filters.
-    Handles 403 blocks gracefully.
+    Matches keywords in title OR snippet. Handles 403 blocks gracefully.
     """
     jobs = []
 
     def fetch(query, location=None, remote=False):
-        base = "https://uk.indeed.com/jobs"  # <-- make sure this exists
+        base = "https://uk.indeed.com/jobs"
         params = {
             "q": query,
             "sort": "date",
-            "fromage": "3",
+            "fromage": "3",   # last 3 days
             "limit": "50",
         }
         if location:
@@ -191,35 +279,38 @@ def scrape_indeed_uk():
         cards = soup.select("div.job_seen_beacon") or soup.select("a.tapItem")
 
         for card in cards:
-            title_el = card.select_one("h2.jobTitle span") or card.select_one("h2.jobTitle")
-            comp_el = card.select_one("span.companyName")
-            loc_el = card.select_one("div.companyLocation")
-            link_el = card.select_one("a.jcs-JobTitle") or (card if card.name == "a" else None)
+            title_el   = card.select_one("h2.jobTitle span") or card.select_one("h2.jobTitle")
+            comp_el    = card.select_one("span.companyName")
+            loc_el     = card.select_one("div.companyLocation")
+            snippet_el = card.select_one("div.job-snippet")
+            link_el    = card.select_one("a.jcs-JobTitle") or (card if card.name == "a" else None)
 
-            title = norm_space(title_el.get_text() if title_el else "")
+            title   = norm_space(title_el.get_text() if title_el else "")
             company = norm_space(comp_el.get_text() if comp_el else "")
             loc_txt = norm_space(loc_el.get_text() if loc_el else (location or ("Remote" if remote else "")))
+            snippet = norm_space(snippet_el.get_text() if snippet_el else "")
 
             link = ""
             if link_el and link_el.has_attr("href"):
                 href = link_el["href"]
                 link = "https://uk.indeed.com" + href if href.startswith("/") else href
 
-            if title and contains_keyword(title):
+            # Match keywords in title OR snippet
+            if contains_keyword(title) or contains_keyword(snippet):
                 jobs.append({
                     "title": title,
                     "company": company or "N/A",
                     "location": loc_txt,
                     "link": link,
-                    "posted_at_iso": NOW_UTC.isoformat(),  # rely on fromage=1
+                    "posted_at_iso": NOW_UTC.isoformat(),  # we rely on fromage=3 for recency
                     "source": "Indeed"
                 })
 
     # Run the 4 searches
     fetch("data analyst", location="London")
-    fetch("data entry", location="London")
+    fetch("data entry",  location="London")
     fetch("data analyst", remote=True)
-    fetch("data entry", remote=True)
+    fetch("data entry",  remote=True)
 
     return jobs
 
