@@ -225,11 +225,20 @@ def scrape_linkedin_stub():
 # =========================
 def collect_all_jobs():
     all_jobs = []
-    all_jobs += scrape_weworkremotely()
-    all_jobs += scrape_reed()
-    all_jobs += scrape_indeed_uk()
-    all_jobs += scrape_hays_stub()
-    all_jobs += scrape_linkedin_stub()
+
+    for name, fn in [
+        ("WeWorkRemotely", scrape_weworkremotely),
+        ("Reed", scrape_reed),
+        ("Indeed", scrape_indeed_uk),
+        ("Hays", scrape_hays_stub),
+        ("LinkedIn", scrape_linkedin_stub),
+    ]:
+        try:
+            batch = fn() or []
+            print(f"[INFO] {name}: {len(batch)} jobs")
+            all_jobs += batch
+        except Exception as e:
+            print(f"[WARN] {name} scraper failed: {e}")
 
     out = []
     for j in all_jobs:
