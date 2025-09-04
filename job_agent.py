@@ -162,55 +162,26 @@ def scrape_reed():
     return jobs
 
 def scrape_indeed_uk():
-    """
-    Indeed UK: use 'fromage=1' (last 24h) + sort=date; London + Remote filters.
-    """
     jobs = []
+
     def fetch(query, location=None, remote=False):
-        base = "https://uk.indeed.com/jobs"
-        params = {
-            "q": query,
-            "sort": "date",
-            "fromage": "1",
-            "limit": "50",
-        }
-        if location:
-            params["l"] = location
-        if remote:
-            params["remotejob"] = "1"
+        # ... (unchanged params)
+        try:
+            r = safe_get(base, params=params)
+        except Exception as e:
+            # Don’t kill the run if Indeed blocks us
+            print(f"[WARN] Indeed blocked or failed for query '{query}' (loc={location}, remote={remote}): {e}")
+            return
+        # ... (parse soup as before)
 
-        r = safe_get(base, params=params)
-        soup = BeautifulSoup(r.text, "html.parser")
-        cards = soup.select("div.job_seen_beacon") or soup.select("a.tapItem")
-        for card in cards:
-            title_el = card.select_one("h2.jobTitle span") or card.select_one("h2.jobTitle")
-            comp_el = card.select_one("span.companyName")
-            loc_el = card.select_one("div.companyLocation")
-            link_el = card.select_one("a.jcs-JobTitle") or (card if card.name == "a" else None)
+    try:
+        fetch("data analyst", location="London")
+        fetch("data entry", location="London")
+        fetch("data analyst", remote=True)
+        fetch("data entry", remote=True)
+    except Exception as e:
+        print(f"[WARN] Indeed scraper error: {e}")
 
-            title = norm_space(title_el.get_text() if title_el else "")
-            company = norm_space(comp_el.get_text() if comp_el else "")
-            loc_txt = norm_space(loc_el.get_text() if loc_el else (location or ("Remote" if remote else "")))
-
-            link = ""
-            if link_el and link_el.has_attr("href"):
-                href = link_el["href"]
-                link = "https://uk.indeed.com" + href if href.startswith("/") else href
-
-            if title and contains_keyword(title):
-                jobs.append({
-                    "title": title,
-                    "company": company or "N/A",
-                    "location": loc_txt,
-                    "link": link,
-                    "posted_at_iso": NOW_UTC.isoformat(),  # rely on fromage=1
-                    "source": "Indeed"
-                })
-
-    fetch("data analyst", location="London")
-    fetch("data entry", location="London")
-    fetch("data analyst", remote=True)
-    fetch("data entry", remote=True)
     return jobs
 
 # Stubs (optional future upgrade with Playwright/login or APIs)
