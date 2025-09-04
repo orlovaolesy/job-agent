@@ -14,7 +14,7 @@ import yagmail
 # =========================
 KEYWORDS = ["data analyst", "data entry"]
 LOCATIONS = ["London", "Remote"]  # Hint for labeling
-LOOKBACK_HOURS = 24
+LOOKBACK_HOURS = 72
 
 TO_EMAIL = os.getenv("TO_EMAIL", "olesiaodyntsova.job@gmail.com")
 GMAIL_USER = os.getenv("GMAIL_USER")          # set in GitHub Secrets
@@ -163,7 +163,7 @@ def scrape_reed():
 
 def scrape_indeed_uk():
     """
-    Indeed UK: use 'fromage=1' (last 24h) + sort=date; London + Remote filters.
+    Indeed UK: use 'fromage=3' (last 72h) + sort=date; London + Remote filters.
     Handles 403 blocks gracefully.
     """
     jobs = []
@@ -173,7 +173,7 @@ def scrape_indeed_uk():
         params = {
             "q": query,
             "sort": "date",
-            "fromage": "1",
+            "fromage": "3",
             "limit": "50",
         }
         if location:
@@ -278,9 +278,9 @@ def send_email(jobs):
     subject = "💼 Weekly Job Digest — Data Analyst / Data Entry (last 24h)"
     if jobs:
         lines = [fmt_job(j) for j in jobs]
-        body = "Here are the freshest roles from the last 24 hours:\n\n" + "\n\n".join(lines)
+        body = "Here are the freshest roles from the last 72 hours:\n\n" + "\n\n".join(lines)
     else:
-        body = "No roles matched in the last 24 hours this week."
+        body = "No roles matched in the last 72 hours this week."
     yag.send(TO_EMAIL, subject, body)
 
 def main():
