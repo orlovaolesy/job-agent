@@ -8,6 +8,7 @@ on:
 jobs:
   run-agent:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
@@ -22,17 +23,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-     - name: Run agent (dry run)
-       env:
-         GMAIL_USER: ${{ secrets.GMAIL_USER }}
-         GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-         TO_EMAIL: "olesiaodyntsova.job@gmail.com"
-         DRY_RUN: "1"
-      run: python job_agent.py
-
+      - name: Run agent (dry run)
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          TO_EMAIL: "olesiaodyntsova.job@gmail.com"
+          DRY_RUN: "1"   # set to "0" or remove to send real email
+        run: python job_agent.py
 
       - name: Upload JSON artifact (optional)
         uses: actions/upload-artifact@v4
         with:
           name: latest_jobs
           path: latest_jobs.json
+
