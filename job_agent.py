@@ -23,8 +23,12 @@ DRY_RUN = os.getenv("DRY_RUN", "0") == "1"    # <<< NEW: enable with DRY_RUN="1"
 
 NOW_UTC = datetime.now(timezone.utc)
 SINCE_UTC = NOW_UTC - timedelta(hours=LOOKBACK_HOURS)
-UA = {"User-Agent": "Mozilla/5.0 (compatible; JobAgent/1.0)"}
-
+UA = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Referer": "https://uk.indeed.com/",
+}
 # =========================
 # UTILITIES
 # =========================
@@ -40,12 +44,23 @@ def within_last_24h(dt: datetime) -> bool:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt >= SINCE_UTC
 
-def safe_get(url, params=None, headers=None):
-    time.sleep(0.8)  # be gentle
-    resp = requests.get(url, params=params, headers=headers or UA, timeout=30)
-    resp.raise_for_status()
-    return resp
-
+def safe_get(url, params=None, headers=None, max_retries=3):
+    last_err = None
+    for i in range(max_retries):
+        try:
+            time.sleep(0.8 + i * 0.5)  # gentle backoff
+            resp = requests.get(url, params=params, headers=headers or UA, timeout=30)
+            # some sites 403 on first try then succeed on retry; treat 403 specially
+            if resp.status_code == 403:
+                last_err = requests.HTTPError(f"403 Forbidden: {resp.url}")
+                continue
+            resp.raise_for_status()
+            return resp
+        except requests.RequestException as e:
+            last_err = e
+    # give up after retries
+    raise last_err
+    
 def dedupe(jobs):
     seen = set()
     out = []
