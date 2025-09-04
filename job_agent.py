@@ -19,6 +19,7 @@ LOOKBACK_HOURS = 24
 TO_EMAIL = os.getenv("TO_EMAIL", "olesiaodyntsova.job@gmail.com")
 GMAIL_USER = os.getenv("GMAIL_USER")          # set in GitHub Secrets
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")  # set in GitHub Secrets
+DRY_RUN = os.getenv("DRY_RUN", "0") == "1"    # <<< NEW: enable with DRY_RUN="1"
 
 NOW_UTC = datetime.now(timezone.utc)
 SINCE_UTC = NOW_UTC - timedelta(hours=LOOKBACK_HOURS)
@@ -232,6 +233,11 @@ def collect_all_jobs():
     return out
 
 def send_email(jobs):
+    # --- DRY RUN: skip email sending ---
+    if DRY_RUN:
+        print("[INFO] DRY_RUN=1 → skipping email send")
+        return
+
     if not GMAIL_USER or not GMAIL_APP_PASSWORD:
         raise RuntimeError("Missing GMAIL_USER or GMAIL_APP_PASSWORD env vars.")
     yag = yagmail.SMTP(GMAIL_USER, GMAIL_APP_PASSWORD)
@@ -254,7 +260,8 @@ def main():
     with open("latest_jobs.json", "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
     send_email(jobs)
-    print("Email sent to", TO_EMAIL)
+    print(f"JSON saved. Email {'skipped (DRY_RUN)' if DRY_RUN else 'sent'} to {TO_EMAIL}")
 
 if __name__ == "__main__":
     main()
+
