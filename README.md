@@ -22,7 +22,8 @@
    cd job-agent
 2. **Install dependencies**
    ```bash
-  pip install -r requirements.txt
+   pip install -r requirements.txt
+ 
 
 3. **Configure environment**
    Copy .env.example → .env
@@ -35,6 +36,7 @@
 ✅ Results will be saved and also sent to your email.
 
 ## ⚙️ Configuration
+```bash
 .env
 env
 
@@ -47,6 +49,8 @@ REED_API_KEY=your_reed_key
 
 #### Recipient
 TO_EMAIL=receiver@gmail.com
+
+---
 
 ### Notes
 mail requires an App Password (enable 2FA → create app password).
