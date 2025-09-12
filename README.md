@@ -21,24 +21,26 @@
 git clone https://github.com/<your-user>/job-agent.git
 cd job-agent
 
-2. Install dependencies
+
+2. **Install dependencies**
+```bash
 pip install -r requirements.txt
 
-3. Configure environment
+3. **Configure environment**
 
 Copy .env.example → .env
 
 Add your credentials (see below)
 
-4. Run the agent
-
+4. **Run the agent**
+```bash
 python main.py
 
 
 ✅ Results will be saved and also sent to your email.
 
-⚙️ Configuration
-.env
+## ⚙️ Configuration
+```bash.env
 
 # Gmail SMTP
 GMAIL_USER=your@gmail.com
