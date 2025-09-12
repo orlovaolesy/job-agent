@@ -3,10 +3,10 @@ import requests
 def fetch_arbeitnow(keyword):
     try:
         resp = requests.get("https://arbeitnow.com/api/job-board-api", timeout=15)
-        resp.raise_for_status()  # если HTTP ошибка — будет исключение
+        resp.raise_for_status()  
         data = resp.json().get("data", [])
     except Exception as e:
-        print(f"[Arbeitnow] Ошибка: {e}")
+        print(f"[Arbeitnow] Error: {e}")
         return []
 
     return [
