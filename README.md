@@ -17,9 +17,9 @@
 ## 🚀 Quickstart
 
 1. **Clone & enter**
-```bash
-git clone https://github.com/<your-user>/job-agent.git
-cd job-agent
+   ```bash
+   git clone https://github.com/<your-user>/job-agent.git
+   cd job-agent
 Install dependencies
 
 bash
@@ -55,9 +55,4 @@ Notes
 Gmail requires an App Password (enable 2FA → create app password).
 
 Reed API key can be requested via their developer portal.
-
-For other boards (e.g. Remotive, Arbeitnow), no API key is needed.
-
-
-
 
