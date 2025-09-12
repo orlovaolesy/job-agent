@@ -40,14 +40,14 @@
 .env
 env
 
-#### Gmail SMTP
+Gmail SMTP
 GMAIL_USER=your@gmail.com
 GMAIL_APP_PASSWORD=your_app_password
 
-#### API Keys
+API Keys
 REED_API_KEY=your_reed_key
 
-#### Recipient
+Recipient
 TO_EMAIL=receiver@gmail.com
 
 ---
