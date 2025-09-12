@@ -20,28 +20,28 @@
 ```bash
 git clone https://github.com/<your-user>/job-agent.git
 cd job-agent
+Install dependencies
 
-
-2. **Install dependencies**
-```bash
+bash
+Копировать код
 pip install -r requirements.txt
-
-3. **Configure environment**
+Configure environment
 
 Copy .env.example → .env
 
 Add your credentials (see below)
 
-4. **Run the agent**
-```bash
+Run the agent
+
+bash
+Копировать код
 python main.py
-
-
 ✅ Results will be saved and also sent to your email.
 
-## ⚙️ Configuration
-```bash.env
-
+⚙️ Configuration
+.env
+env
+Копировать код
 # Gmail SMTP
 GMAIL_USER=your@gmail.com
 GMAIL_APP_PASSWORD=your_app_password
@@ -51,13 +51,13 @@ REED_API_KEY=your_reed_key
 
 # Recipient
 TO_EMAIL=receiver@gmail.com
-
 Notes
-
 Gmail requires an App Password (enable 2FA → create app password).
 
 Reed API key can be requested via their developer portal.
 
 For other boards (e.g. Remotive, Arbeitnow), no API key is needed.
+
+
 
 
