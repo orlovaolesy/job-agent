@@ -1,10 +1,10 @@
 # Job Agent: Automatic Job Collector
 
-🔍 A Python agent that collects job postings from popular websites based on keywords, removes duplicates, and sends a clean digest to your email 📬
+A Python agent that collects job postings from popular websites based on keywords, removes duplicates, and sends a clean digest to your email
 
 ---
 
-## ✨ Features
+##  Features
 - Multiple job sources supported (Reed, Remotive, Arbeitnow, etc.)
 - Keyword search only in job descriptions
 - Duplicate removal by title + company + link
@@ -14,7 +14,7 @@
 
 ---
 
-## 🚀 Quickstart
+##  Quickstart
 
 1. **Clone & enter**
     ```bash
@@ -33,9 +33,9 @@
    ```bash
    python main.py
 
-✅ Results will be saved and also sent to your email.
+ Results will be saved and also sent to your email.
 
-## ⚙️ Configuration
+##  Configuration
 ```bash
 .env
 env
